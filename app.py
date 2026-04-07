@@ -1,4 +1,4 @@
-from flfrom flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
 import requests
@@ -12,11 +12,13 @@ YOUTUBE_API_KEY = "AIzaSyAj_ZB8TOSQViO5MYQAfYEnf-T9LlcuFks"
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
-# ফাইল ডাউনলোডের পর সার্ভার থেকে মুছে ফেলার ফাংশন
 def delayed_delete(file_path):
-    time.sleep(300) # ৫ মিনিট পর ফাইল ডিলিট হবে
+    time.sleep(300)
     if os.path.exists(file_path):
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+        except:
+            pass
 
 @app.route('/')
 def index():
@@ -70,18 +72,15 @@ def download():
         'quiet': True
     }
     
-    if quality == 'mp3':
-        ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '192'}]
-
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
             filename = ydl.prepare_filename(info)
-            if quality == 'mp3': filename = filename.rsplit('.', 1)[0] + '.mp3'
+            if quality == 'mp3':
+                # MP3 এর জন্য আলাদা কোনো লাইব্রেরি ছাড়া আপাতত বেস্ট অডিও ফাইল পাঠানো হচ্ছে
+                pass 
             
-            # ডাউনলোড শেষ হলে আলাদা থ্রেডে ডিলিট শিডিউল করা
             threading.Thread(target=delayed_delete, args=(filename,)).start()
-            
             return send_file(filename, as_attachment=True)
     except Exception as e:
         return str(e), 500
