@@ -12,13 +12,12 @@ YOUTUBE_API_KEY = "AIzaSyAj_ZB8TOSQViO5MYQAfYEnf-T9LlcuFks"
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
+# ফাইল ডিলিট ফাংশন
 def delayed_delete(file_path):
     time.sleep(300)
     if os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-        except:
-            pass
+        try: os.remove(file_path)
+        except: pass
 
 @app.route('/')
 def index():
@@ -45,12 +44,18 @@ def search():
 @app.route('/get_info', methods=['POST'])
 def get_info():
     video_url = request.form.get('url')
-    ydl_opts = {'quiet': True, 'noplaylist': True}
+    ydl_opts = {
+        'quiet': True, 
+        'noplaylist': True,
+        'cookiefile': 'cookies.txt', # কুকি ফাইল অবশ্যই থাকতে হবে
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(video_url, download=False)
-            formats = info.get('formats', [])
-            play_url = next((f['url'] for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none'), info.get('url'))
+            # সরাসরি প্লে লিঙ্ক বের করা
+            formats = [f for f in info.get('formats', []) if f.get('vcodec') != 'none' and f.get('acodec') != 'none']
+            play_url = formats[0]['url'] if formats else info.get('url')
             return jsonify({"title": info['title'], "video_url": play_url, "url": video_url})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -69,17 +74,15 @@ def download():
     ydl_opts = {
         'format': q_map.get(quality, 'best'),
         'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
-        'quiet': True
+        'cookiefile': 'cookies.txt', # এখানেও কুকি ফাইল লাগবে
+        'nocheckcertificate': True,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
             filename = ydl.prepare_filename(info)
-            if quality == 'mp3':
-                # MP3 এর জন্য আলাদা কোনো লাইব্রেরি ছাড়া আপাতত বেস্ট অডিও ফাইল পাঠানো হচ্ছে
-                pass 
-            
             threading.Thread(target=delayed_delete, args=(filename,)).start()
             return send_file(filename, as_attachment=True)
     except Exception as e:
