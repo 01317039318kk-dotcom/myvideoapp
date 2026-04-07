@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Downloader App</title>
+    <style>
+        body { background-color: #121212; color: white; font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+        .video-card { background: #1e1e1e; border-radius: 12px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        .video-card img { width: 100%; display: block; }
+        .video-info { padding: 12px; }
+        .video-title { font-size: 14px; font-weight: bold; line-height: 1.4; }
+        #loader { text-align: center; padding: 20px; display: none; color: #ff0050; }
+    </style>
+</head>
+<body>
+
+    <div id="video-container"></div>
+    <div id="loader">Loading more videos...</div>
+
+    <script>
+        let nextToken = "";
+        let isLoading = false;
+
+        async function loadVideos() {
+            if (isLoading) return;
+            isLoading = true;
+            document.getElementById('loader').style.display = "block";
+
+            try {
+                const response = await fetch(`/api/videos?pageToken=${nextToken}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('video-container');
+                data.videos.forEach(video => {
+                    const card = `
+                        <div class="video-card">
+                            <img src="${video.thumbnail}" alt="thumbnail">
+                            <div class="video-info">
+                                <div class="video-title">${video.title}</div>
+                            </div>
+                        </div>`;
+                    container.innerHTML += card;
+                });
+
+                nextToken = data.nextPageToken;
+            } catch (error) {
+                console.error("Error loading videos:", error);
+            } finally {
+                isLoading = false;
+                document.getElementById('loader').style.display = "none";
+            }
+        }
+
+        // Infinite Scroll Logic: স্ক্রল শেষ হওয়ার ৫০০ পিক্সেল আগেই নতুন ভিডিও লোড হবে
+        window.onscroll = () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                if (nextToken && !isLoading) {
+                    loadVideos();
+                }
+            }
+        };
+
+        // প্রথমবার পেজ লোড হলে ভিডিও দেখাবে
+        window.onload = loadVideos;
+    </script>
+</body>
+</html>
+

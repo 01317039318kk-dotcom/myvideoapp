@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; }
+        .card { margin: 10px; border-radius: 10px; overflow: hidden; background: #1e1e1e; }
+        .card img { width: 100%; }
+        .title { padding: 10px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div id="list"></div>
+    <script>
+        let token = "";
+        async function load() {
+            const res = await fetch(`/api/videos?pageToken=${token}`);
+            const data = await res.json();
+            data.videos.forEach(v => {
+                document.getElementById('list').innerHTML += `<div class="card"><img src="${v.thumbnail}"><div class="title">${v.title}</div></div>`;
+            });
+            token = data.nextPageToken;
+        }
+        window.onscroll = () => { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) load(); };
+        window.onload = load;
+    </script>
+</body>
+</html>
+
